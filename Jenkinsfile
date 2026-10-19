@@ -11,13 +11,15 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                bat 'npm ci'
+                sh 'node --version'
+                sh 'npm --version'
+                sh 'npm ci'
             }
         }
 
         stage('Build React Application') {
             steps {
-                bat 'npm run build'
+                sh 'npm run build'
             }
         }
 
