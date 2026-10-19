@@ -34,5 +34,18 @@ pipeline {
             }
         }
     }
-}
 
+    post {
+        success {
+            echo 'SUCCESS: Travel Booking application built successfully!'
+        }
+
+        failure {
+            echo 'FAILED: Check the Jenkins console output for errors.'
+        }
+
+        always {
+            echo 'Travel Booking pipeline execution finished.'
+        }
+    }
+}
