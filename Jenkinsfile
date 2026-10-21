@@ -1,51 +1,53 @@
 
 pipeline {
-    agent {
-        docker {
-            image 'node:20-alpine'
-            args '-u root:root'
-        }
-    }
+    agent any
 
     stages {
         stage('Checkout') {
             steps {
-                echo 'Travel Booking source code checked out from GitHub'
+                echo 'Travel Booking source code checked out.'
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Build Docker Image') {
             steps {
-                sh 'node --version'
-                sh 'npm --version'
-                sh 'npm ci'
+                sh '''
+                    docker build \
+                      -t travel-booking:${BUILD_NUMBER} \
+                      -t travel-booking:latest .
+                '''
             }
         }
 
-        stage('Build React Application') {
+        stage('Deploy Container') {
             steps {
-                sh 'npm run build'
+                sh '''
+                    docker rm -f travel-booking-web || true
+
+                    docker run -d \
+                      --restart unless-stopped \
+                      --name travel-booking-web \
+                      -p 8081:80 \
+                      travel-booking:${BUILD_NUMBER}
+                '''
             }
         }
 
-        stage('Build Complete') {
+        stage('Verify Deployment') {
             steps {
-                echo 'Travel Booking application built successfully!'
+                sh 'docker ps --filter name=travel-booking-web'
+                echo 'Travel Booking deployment completed!'
             }
         }
     }
 
     post {
         success {
-            echo 'SUCCESS: Travel Booking application built successfully!'
+            echo 'SUCCESS: Docker image built and application deployed!'
         }
 
         failure {
-            echo 'FAILED: Check the Jenkins console output for errors.'
-        }
-
-        always {
-            echo 'Travel Booking pipeline execution finished.'
+            echo 'FAILED: Check Console Output for the error.'
         }
     }
 }
