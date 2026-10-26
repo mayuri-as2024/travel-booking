@@ -2,6 +2,10 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKERHUB_REPO = 'mayurias2024/travel-booking'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -13,9 +17,29 @@ pipeline {
             steps {
                 sh '''
                     docker build \
-                      -t travel-booking:${BUILD_NUMBER} \
-                      -t travel-booking:latest .
+                      -t ${DOCKERHUB_REPO}:${BUILD_NUMBER} \
+                      -t ${DOCKERHUB_REPO}:latest .
                 '''
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKERHUB_USER',
+                    passwordVariable: 'DOCKERHUB_TOKEN'
+                )]) {
+                    sh '''
+                        echo "$DOCKERHUB_TOKEN" | docker login \
+                          -u "$DOCKERHUB_USER" --password-stdin
+
+                        docker push ${DOCKERHUB_REPO}:${BUILD_NUMBER}
+                        docker push ${DOCKERHUB_REPO}:latest
+
+                        docker logout
+                    '''
+                }
             }
         }
 
@@ -28,7 +52,7 @@ pipeline {
                       --restart unless-stopped \
                       --name travel-booking-web \
                       -p 8081:80 \
-                      travel-booking:${BUILD_NUMBER}
+                      ${DOCKERHUB_REPO}:${BUILD_NUMBER}
                 '''
             }
         }
@@ -43,7 +67,7 @@ pipeline {
 
     post {
         success {
-            echo 'SUCCESS: Docker image built and application deployed!'
+            echo 'SUCCESS: Image built, pushed to Docker Hub, and application deployed!'
         }
 
         failure {
